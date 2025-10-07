@@ -6,7 +6,7 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
-import User from "./models/User.js";
+import User from "./models/user.js";
 
 dotenv.config();
 const app = express();
