@@ -8,13 +8,14 @@
 <body>
   <div class="dashboard-container">
     <h1>Welcome to Movie Ratings</h1>
-    <button onclick="logout()" class="logout-btn">Logout</button>
-
-    <div id="movie-list">
-      <!-- Movies will be loaded here via AJAX -->
-    </div>
+    <div id="movies-container" class="movies-grid"></div>
   </div>
 
-  <script src="js/dashboard.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      loadMovies();
+    });
+  </script>
 </body>
 </html>
