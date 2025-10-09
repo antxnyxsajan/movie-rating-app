@@ -1,65 +1,74 @@
-import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import bcrypt from "bcryptjs";
-import session from "express-session";
-import bodyParser from "body-parser";
-import path from "path";
-import { fileURLToPath } from "url";
-import User from "./models/user.js";
+import express from 'express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import User from './models/user.js';
 
 dotenv.config();
+
 const app = express();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, "public")));
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-  })
-);
+// Serve static files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, 'public')));
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error(err));
+// Middleware
+app.use(express.json());
 
-app.post("/signup", async (req, res) => {
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => console.error("❌ MongoDB connection error:", err));
+
+// Routes
+
+// Signup
+app.post('/signup', async (req, res) => {
   const { username, password } = req.body;
-  const userExists = await User.findOne({ username });
-  if (userExists) return res.json({ success: false, message: "User exists" });
+  if (!username || !password)
+    return res.json({ success: false, message: "Missing fields." });
 
-  const hashed = await bcrypt.hash(password, 10);
-  await User.create({ username, password: hashed });
-  res.json({ success: true });
+  try {
+    const existingUser = await User.findOne({ username });
+    if (existingUser)
+      return res.json({ success: false, message: "Username already exists." });
+
+    const newUser = new User({ username, password });
+    await newUser.save();
+    res.json({ success: true, message: "Signup successful!" });
+  } catch (err) {
+    res.json({ success: false, message: "Error signing up." });
+  }
 });
 
-app.post("/login", async (req, res) => {
+// Login
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = await User.findOne({ username });
-  if (!user) return res.json({ success: false, message: "User not found" });
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.json({ success: false, message: "Wrong password" });
-
-  req.session.user = user;
-  res.json({ success: true });
+  try {
+    const user = await User.findOne({ username, password });
+    if (!user) return res.json({ success: false, message: "Invalid username or password." });
+    res.json({ success: true, message: "Login successful!" });
+  } catch (err) {
+    res.json({ success: false, message: "Error logging in." });
+  }
 });
 
-app.get("/dashboard", (req, res) => {
-  if (!req.session.user)
-    return res.status(401).send("Unauthorized. Please log in.");
-  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+// Movies placeholder route
+app.get('/movies', (req, res) => {
+  res.json({ success: true, movies: ["Movie 1", "Movie 2", "Movie 3"] });
 });
 
-app.get("/logout", (req, res) => {
-  req.session.destroy(() => res.redirect("/"));
+// Fallback route (catch-all)
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(process.env.PORT, () =>
-  console.log(`🚀 Server running on port ${process.env.PORT}`)
-);
+// Start server
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
